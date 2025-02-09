@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import { Bar } from "react-chartjs-2";
 import {
   Chart as ChartJS,
@@ -17,7 +17,7 @@ import {
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
 const ChartComponent: React.FC = () => {
-  // Static dataset with 150 records, each y-value is a static value between 1 and 100
+  // Static dataset with 150 records
   const staticData = [
     { x: 1, y: 34 }, { x: 2, y: 52 }, { x: 3, y: 61 }, { x: 4, y: 89 }, { x: 5, y: 47 },
     { x: 6, y: 73 }, { x: 7, y: 92 }, { x: 8, y: 45 }, { x: 9, y: 67 }, { x: 10, y: 81 },
@@ -51,32 +51,26 @@ const ChartComponent: React.FC = () => {
     { x: 146, y: 67 }, { x: 147, y: 65 }, { x: 148, y: 90 }, { x: 149, y: 80 }, { x: 150, y: 71 },
   ];
 
-  // Pagination state
-  const [currentPage, setCurrentPage] = useState(0);
+  const [addedDataCount, setAddedDataCount] = useState(0); // Track added data count
   const recordsPerPage = 30; // Show 30 records at once
   const [intervalId, setIntervalId] = useState<NodeJS.Timeout | null>(null);
   const [isRunning, setIsRunning] = useState(false); // Track if the animation is running
 
-  // Get the data for the current page (showing 30 records at a time)
-  const getCurrentData = () => {
-    const startIdx = currentPage;
-    const endIdx = currentPage + recordsPerPage;
-    return staticData.slice(startIdx, endIdx); // Slice out 30 records
-  };
+  // Get the data for the chart (only the last 30 records)
+  // Get the data for the chart (only the last 30 records)
+const chartData: ChartData<"bar"> = {
+  labels: staticData.slice(Math.max(0, addedDataCount - 30), addedDataCount).map((d) => `Label ${d.x}`),
+  datasets: [
+    {
+      label: "Static Data",
+      data: staticData.slice(Math.max(0, addedDataCount - 30), addedDataCount).map((d) => d.y),
+      backgroundColor: "rgba(75, 192, 192, 0.6)",
+      borderColor: "rgba(75, 192, 192, 1)",
+      borderWidth: 1,
+    },
+  ],
+};
 
-  // Chart Data and Labels
-  const chartData: ChartData<"bar"> = {
-    labels: getCurrentData().map((d) => `Label ${d.x}`), // X-axis labels
-    datasets: [
-      {
-        label: "Static Data",
-        data: getCurrentData().map((d) => d.y), // Get 30 data points for the graph
-        backgroundColor: "rgba(75, 192, 192, 0.6)",
-        borderColor: "rgba(75, 192, 192, 1)",
-        borderWidth: 1,
-      },
-    ],
-  };
 
   // Chart Options
   const options: ChartOptions<"bar"> = {
@@ -93,44 +87,42 @@ const ChartComponent: React.FC = () => {
     },
   };
 
-  // Start the sliding animation
-  const startAnimation = () => {
-    const id = setInterval(() => {
-      setCurrentPage((prev) => {
-        const nextPage = prev + 1;
-        return nextPage < staticData.length - recordsPerPage ? nextPage : prev; // Stop when at the last record
-      });
-    }, 300);
-    setIntervalId(id);
-    setIsRunning(true);
-  };
+  // Start the animation (add 1 record every second for the first 30 seconds)
+  // Start the animation (add 1 record every second for the first 30 seconds)
+const startAnimation = () => {
+  if (isRunning || addedDataCount >= staticData.length) return; // Stop if all records are shown
+
+  setIsRunning(true);
+  const interval = setInterval(() => {
+    setAddedDataCount((prevCount) => {
+      if (prevCount < 30) {
+        // If less than 30 records are shown, just add one
+        return prevCount + 1;
+      } else {
+        // After 30 records, slide the data by removing the first record and adding the next one
+        return prevCount + 1;
+      }
+    });
+  }, 1000); // Add data every second
+  setIntervalId(interval);
+};
+
 
   // Pause the animation
   const pauseAnimation = () => {
     if (intervalId) {
       clearInterval(intervalId);
-      setIntervalId(null);
-    }
-    setIsRunning(false);
-  };
-
-  // Toggle Pause/Continue
-  const togglePauseContinue = () => {
-    if (isRunning) {
-      pauseAnimation();
-    } else {
-      startAnimation();
+      setIsRunning(false);
     }
   };
 
-  // Stop the animation and reset to start
+  // Stop and reset everything
   const stopAnimation = () => {
     if (intervalId) {
       clearInterval(intervalId);
-      setIntervalId(null);
     }
-    setCurrentPage(0); // Reset to start
     setIsRunning(false);
+    setAddedDataCount(0); // Reset added data count to start over
   };
 
   return (
@@ -138,11 +130,9 @@ const ChartComponent: React.FC = () => {
       <div className="h-80">
         <Bar data={chartData} options={options} />
       </div>
-
-      {/* Control buttons */}
-      <div className="mt-4 flex gap-2 justify-between">
+      <div className="mt-4 flex gap-2">
         <button
-          className="bg-green-500 text-white px-4 py-2 rounded"
+          className={`bg-blue-500 text-white px-4 py-2 rounded ${isRunning ? "disabled" : ""}`}
           onClick={startAnimation}
           disabled={isRunning}
         >
@@ -150,9 +140,9 @@ const ChartComponent: React.FC = () => {
         </button>
         <button
           className="bg-yellow-500 text-white px-4 py-2 rounded"
-          onClick={togglePauseContinue}
+          onClick={pauseAnimation}
         >
-          {isRunning ? "Pause" : "Continue"}
+          Pause
         </button>
         <button
           className="bg-red-500 text-white px-4 py-2 rounded"
