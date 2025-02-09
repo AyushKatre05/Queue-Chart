@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { Bar } from "react-chartjs-2";
 import {
   Chart as ChartJS,
@@ -53,7 +53,9 @@ const ChartComponent: React.FC = () => {
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(0);
-  const recordsPerPage = 30;  // Show 30 records at once
+  const recordsPerPage = 30; // Show 30 records at once
+  const [intervalId, setIntervalId] = useState<NodeJS.Timeout | null>(null);
+  const [isRunning, setIsRunning] = useState(false); // Track if the animation is running
 
   // Get the data for the current page (showing 30 records at a time)
   const getCurrentData = () => {
@@ -91,13 +93,44 @@ const ChartComponent: React.FC = () => {
     },
   };
 
-  // Pagination controls
-  const handlePagination = (direction: "next" | "previous") => {
-    setCurrentPage((prev) =>
-      direction === "next"
-        ? Math.min(prev + 1, staticData.length - recordsPerPage)  // Ensure we don't go beyond the last page
-        : Math.max(prev - 1, 0)  // Ensure we don't go before the first page
-    );
+  // Start the sliding animation
+  const startAnimation = () => {
+    const id = setInterval(() => {
+      setCurrentPage((prev) => {
+        const nextPage = prev + 1;
+        return nextPage < staticData.length - recordsPerPage ? nextPage : prev; // Stop when at the last record
+      });
+    }, 300);
+    setIntervalId(id);
+    setIsRunning(true);
+  };
+
+  // Pause the animation
+  const pauseAnimation = () => {
+    if (intervalId) {
+      clearInterval(intervalId);
+      setIntervalId(null);
+    }
+    setIsRunning(false);
+  };
+
+  // Toggle Pause/Continue
+  const togglePauseContinue = () => {
+    if (isRunning) {
+      pauseAnimation();
+    } else {
+      startAnimation();
+    }
+  };
+
+  // Stop the animation and reset to start
+  const stopAnimation = () => {
+    if (intervalId) {
+      clearInterval(intervalId);
+      setIntervalId(null);
+    }
+    setCurrentPage(0); // Reset to start
+    setIsRunning(false);
   };
 
   return (
@@ -106,21 +139,26 @@ const ChartComponent: React.FC = () => {
         <Bar data={chartData} options={options} />
       </div>
 
-      {/* Pagination controls */}
+      {/* Control buttons */}
       <div className="mt-4 flex gap-2 justify-between">
         <button
-          className="bg-blue-500 text-white px-4 py-2 rounded disabled:opacity-50"
-          onClick={() => handlePagination("previous")}
-          disabled={currentPage === 0}
+          className="bg-green-500 text-white px-4 py-2 rounded"
+          onClick={startAnimation}
+          disabled={isRunning}
         >
-          Previous
+          Start
         </button>
         <button
-          className="bg-blue-500 text-white px-4 py-2 rounded disabled:opacity-50"
-          onClick={() => handlePagination("next")}
-          disabled={currentPage === staticData.length - recordsPerPage}
+          className="bg-yellow-500 text-white px-4 py-2 rounded"
+          onClick={togglePauseContinue}
         >
-          Next
+          {isRunning ? "Pause" : "Continue"}
+        </button>
+        <button
+          className="bg-red-500 text-white px-4 py-2 rounded"
+          onClick={stopAnimation}
+        >
+          Stop
         </button>
       </div>
     </div>
