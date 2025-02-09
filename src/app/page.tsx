@@ -57,7 +57,7 @@ const ChartComponent: React.FC = () => {
   const [isRunning, setIsRunning] = useState(false); // Track if the animation is running
 
   // Get the data for the chart (only the last 30 records)
-  // Get the data for the chart (only the last 30 records)
+// Get the data for the chart (only the last 30 records)
 const chartData: ChartData<"bar"> = {
   labels: staticData.slice(Math.max(0, addedDataCount - 30), addedDataCount).map((d) => `Label ${d.x}`),
   datasets: [
@@ -70,6 +70,7 @@ const chartData: ChartData<"bar"> = {
     },
   ],
 };
+
 
 
   // Chart Options
@@ -89,23 +90,24 @@ const chartData: ChartData<"bar"> = {
 
   // Start the animation (add 1 record every second for the first 30 seconds)
   // Start the animation (add 1 record every second for the first 30 seconds)
+// Start the animation (add 1 record every second for the first 30 seconds)
 const startAnimation = () => {
   if (isRunning || addedDataCount >= staticData.length) return; // Stop if all records are shown
 
   setIsRunning(true);
   const interval = setInterval(() => {
     setAddedDataCount((prevCount) => {
-      if (prevCount < 30) {
-        // If less than 30 records are shown, just add one
-        return prevCount + 1;
+      if (prevCount < staticData.length) {
+        return prevCount + 1; // Add one record every second
       } else {
-        // After 30 records, slide the data by removing the first record and adding the next one
-        return prevCount + 1;
+        clearInterval(interval); // Stop once all records have been shown
+        return prevCount; // No more data is added after this point
       }
     });
-  }, 1000); // Add data every second
+  }, 100); // Add data every second
   setIntervalId(interval);
 };
+
 
 
   // Pause the animation
